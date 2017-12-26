@@ -204,9 +204,10 @@ int main(int argc, char* argv[]) {
                 if (machine->redraw) {
                     SDL_SetRenderDrawColor(gRenderer, 255, 255, 255, 255);
                     for (int i = 0; i < GAL_HEIGHT; ++i)
-                        for (int j = 0; i < GAL_WIDTH; ++j)
+                        for (int j = 0; j < GAL_WIDTH; ++j)
                             if (machine->VRAM[i * GAL_HEIGHT + j])
                                 SDL_RenderDrawPoint(gRenderer, j, i);
+                    machine->redraw = 0;
                 }
 
                 // run code

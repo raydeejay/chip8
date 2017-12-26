@@ -18,8 +18,6 @@
 //Screen dimension constants
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 320
-#define GAL_WIDTH 64
-#define GAL_HEIGHT 32
 #define SCREEN_FPS 500
 #define SCREEN_TICKS_PER_FRAME (1000 / SCREEN_FPS)
 
@@ -80,7 +78,7 @@ int init() {
 
     SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
 
-    SDL_RenderSetLogicalSize(gRenderer, GAL_WIDTH, GAL_HEIGHT);
+    SDL_RenderSetLogicalSize(gRenderer, CHIP8_WIDTH, CHIP8_HEIGHT);
 
     int imgFlags = IMG_INIT_PNG;
     if (!(IMG_Init(imgFlags) & imgFlags)) {
@@ -208,9 +206,9 @@ int main(int argc, char* argv[]) {
                     SDL_RenderClear(gRenderer);
 
                     SDL_SetRenderDrawColor(gRenderer, 255, 255, 255, 255);
-                    for (int i = 0; i < GAL_HEIGHT; ++i)
-                        for (int j = 0; j < GAL_WIDTH; ++j)
-                            if (machine->VRAM[i * GAL_WIDTH + j])
+                    for (int i = 0; i < CHIP8_HEIGHT; ++i)
+                        for (int j = 0; j < CHIP8_WIDTH; ++j)
+                            if (machine->VRAM[i * CHIP8_WIDTH + j])
                                 SDL_RenderDrawPoint(gRenderer, j, i);
                     machine->redraw = 0;
                 }

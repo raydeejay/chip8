@@ -16,11 +16,11 @@
 #include "chip8.h"
 
 //Screen dimension constants
-#define SCREEN_WIDTH 720
-#define SCREEN_HEIGHT 400
+#define SCREEN_WIDTH 640
+#define SCREEN_HEIGHT 320
 #define GAL_WIDTH 64
 #define GAL_HEIGHT 32
-#define SCREEN_FPS 60
+#define SCREEN_FPS 500
 #define SCREEN_TICKS_PER_FRAME (1000 / SCREEN_FPS)
 
 typedef enum {
@@ -42,7 +42,7 @@ SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
 
 // Sound effects, not sure about the limit yet
-Mix_Chunk *gSfx[72] = {};
+Mix_Chunk *gSfx[72] = { NULL };
 int gMaxSfx = -1;
 
 /*************************************************
@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
     chip8_t *machine = chip8_new();
     chip8_init(machine);
     chip8_loadFile(machine, filename);
-    
+
     // Start up SDL and create window
     if (!init()) {
         printf("Failed to initialize!\n");
@@ -136,7 +136,6 @@ int main(int argc, char* argv[]) {
     else {
         // Main loop flag
         int quit = 0;
-        unsigned short keys = 0;
 
         // Event handler
         SDL_Event e;
@@ -144,12 +143,12 @@ int main(int argc, char* argv[]) {
 
         // Start counting frames per second
         int countedFrames = 0;
-        
+
         // While application is running
         while (!quit)
         {
             int startFrame = SDL_GetTicks();
-            keys = 0;
+            unsigned char keys[16] = { 0 };
 
             // NOTE that only game mode is implemented for now
             if (machine_mode == GAME) {
@@ -177,31 +176,37 @@ int main(int argc, char* argv[]) {
                 }
 
                 // get keys
-                if (state[SDL_SCANCODE_1]) { keys |= (1 <<  0); }
-                if (state[SDL_SCANCODE_2]) { keys |= (1 <<  1); }
-                if (state[SDL_SCANCODE_3]) { keys |= (1 <<  2); }
-                if (state[SDL_SCANCODE_4]) { keys |= (1 <<  3); }
-                if (state[SDL_SCANCODE_Q]) { keys |= (1 <<  4); }
-                if (state[SDL_SCANCODE_W]) { keys |= (1 <<  5); }
-                if (state[SDL_SCANCODE_E]) { keys |= (1 <<  6); }
-                if (state[SDL_SCANCODE_R]) { keys |= (1 <<  7); }
-                if (state[SDL_SCANCODE_A]) { keys |= (1 <<  8); }
-                if (state[SDL_SCANCODE_S]) { keys |= (1 <<  9); }
-                if (state[SDL_SCANCODE_D]) { keys |= (1 << 10); }
-                if (state[SDL_SCANCODE_F]) { keys |= (1 << 11); }
-                if (state[SDL_SCANCODE_Z]) { keys |= (1 << 12); }
-                if (state[SDL_SCANCODE_X]) { keys |= (1 << 13); }
-                if (state[SDL_SCANCODE_C]) { keys |= (1 << 14); }
-                if (state[SDL_SCANCODE_V]) { keys |= (1 << 15); }
+                if (state[SDL_SCANCODE_1]) { keys[0x1] = 1; }
+                if (state[SDL_SCANCODE_2]) { keys[0x2] = 1; }
+                if (state[SDL_SCANCODE_3]) { keys[0x3] = 1; }
+                if (state[SDL_SCANCODE_4]) { keys[0xC] = 1; }
+                
+                if (state[SDL_SCANCODE_Q]) { keys[0x4] = 1; }
+                if (state[SDL_SCANCODE_W]) { keys[0x5] = 1; }
+                if (state[SDL_SCANCODE_E]) { keys[0x6] = 1; }
+                if (state[SDL_SCANCODE_R]) { keys[0xD] = 1; }
+                
+                if (state[SDL_SCANCODE_A]) { keys[0x7] = 1; }
+                if (state[SDL_SCANCODE_S]) { keys[0x8] = 1; }
+                if (state[SDL_SCANCODE_D]) { keys[0x9] = 1; }
+                if (state[SDL_SCANCODE_F]) { keys[0xE] = 1; }
+                
+                if (state[SDL_SCANCODE_Z]) { keys[0xA] = 1; }
+                if (state[SDL_SCANCODE_X]) { keys[0x0] = 1; }
+                if (state[SDL_SCANCODE_C]) { keys[0xB] = 1; }
+                if (state[SDL_SCANCODE_V]) { keys[0xF] = 1; }
 
                 chip8_setKeys(machine, keys);
 
-                // Clear screen
-                SDL_SetRenderDrawColor(gRenderer, 0, 0, 0, 255);
-                SDL_RenderClear(gRenderer);
+                // run code
+                chip8_cycle(machine);
 
                 // refresh the display if necessary
                 if (machine->redraw) {
+                    // Clear screen
+                    SDL_SetRenderDrawColor(gRenderer, 0, 0, 0, 255);
+                    SDL_RenderClear(gRenderer);
+
                     SDL_SetRenderDrawColor(gRenderer, 255, 255, 255, 255);
                     for (int i = 0; i < GAL_HEIGHT; ++i)
                         for (int j = 0; j < GAL_WIDTH; ++j)
@@ -210,8 +215,6 @@ int main(int argc, char* argv[]) {
                     machine->redraw = 0;
                 }
 
-                // run code
-                chip8_cycle(machine);
             }
 
             // Update screen
@@ -229,7 +232,7 @@ int main(int argc, char* argv[]) {
     // Free resources and close SDL
     chip8_destroy(machine);
     free(machine);
-    
+
     myclose();
 
     return 0;

@@ -1,15 +1,15 @@
 BINARY=chip8
 CC=gcc
-CFLAGS=-O3 -g -Wall `sdl2-config --cflags`
+CFLAGS=-O3 -g -Wall -pedantic `sdl2-config --cflags`
 LDFLAGS=-lm `sdl2-config --libs` -lSDL2_image -lSDL2_mixer -lSDL2_ttf
 
-CFILES=main.c api.c chip8.c fontset.c opcodes.c
+CFILES=main.c chip8.c fontset.c opcodes.c
 
 .PHONY: clean
 
 all: $(BINARY)
 
-$(BINARY): api.o main.o chip8.o fontset.o opcodes.o
+$(BINARY): main.o chip8.o fontset.o opcodes.o
 	${CC} ${CFLAGS} $^ ${LDFLAGS} -o ${BINARY}
 
 #.c.o: terminal.h buffer.h aria.h api.h
@@ -22,7 +22,7 @@ clean:
 check-syntax:
 	gcc -o nul -S ${CHK_SOURCES}
 
-make.depend: api.c api.h main.c chip8.c chip8.h fontset.c opcodes.c opcodes.h
+make.depend: main.c chip8.c chip8.h fontset.c opcodes.c opcodes.h
 	touch make.depend
 	makedepend -I/usr/include/linux -I/usr/lib/gcc/x86_64-linux-gnu/5/include/ -fmake.depend $^
 

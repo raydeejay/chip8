@@ -47,8 +47,8 @@ void unregisterLabels() {
 
     while (label) {
         label_t *aux = label->next ? label->next : NULL;
-        if (aux) free(label);
-        label = aux;
+        free(label);
+        label = aux ? aux : NULL;
     }
 }
 
@@ -57,10 +57,10 @@ int findLabel(const char *name) {
 
     while (label) {
         if (!strcmp(label->name, name)) {
-            printf("Found label %s with address 0x%04x\n", label->name, label->addr);
+            /* printf("Found label %s with address 0x%04x\n", label->name, label->addr); */
             return label->addr;
         }
-            
+
         label = label->next ? label->next : NULL;
     }
 
@@ -80,26 +80,27 @@ unsigned char *gMemory = NULL;
 
 int getTarget(const char *arg, int addr, const char *filename, int linenum) {
     unsigned short target = 0xFFFF;
-    
+
     if (arg[0] == '#') {
         target = strtol(arg+1, NULL, 16) & 0x0FFF;
-        printf("Address #%03x\n", target);
+        /* printf("Address #%03x\n", target); */
     }
     else if (arg[0] == '-') {
-        target = addr - (strtol(arg+1, NULL, 16) & 0x0FFF);
-        printf("Address -#%03x\n", target);
+        target = addr - (strtol(arg+2, NULL, 16) & 0x0FFF);
+        /* printf("Address -#%03x\n", target); */
     }
     else if (arg[0] == '+') {
-        target = addr + (strtol(arg+1, NULL, 16) & 0x0FFF);
-        printf("Address +#%03x\n", target);
+        target = addr + (strtol(arg+2, NULL, 16) & 0x0FFF);
+        /* printf("Address +#%03x\n", target); */
     }
     else {
         target = findLabel(arg);
         if (target != 0xFFFF) {
-            printf("Address label %s #%03x\n", arg, target);
+            /* printf("Address label %s #%03x\n", arg, target); */
         }
         else {
-            printf("%s:%u:1: warning: undefined label %s\n", filename, linenum, arg);
+            /* printf("%s:%u:1: warning: undefined label %s\n", filename, linenum, arg); */
+            target = 0xFFFF;
         }
     }
     return target;

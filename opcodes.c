@@ -305,6 +305,10 @@ void opcodeF(chip8_t *machine) {
         break;
     case 0x001E:
         machine->I += machine->V[x];
+        // VF is set to 1 when there is a range overflow (I+VX>0xFFF),
+        // and to 0 when there isn't. This is an undocumented feature
+        // of the CHIP-8 and used by the Spacefight 2091! game.
+        machine->V[0xF] = (machine->I + machine->V[x] > 0xFFF) ? 1 : 0;
         break;
     case 0x0029:
         machine->I = FONTBASEADDR + machine->V[x]* 5;

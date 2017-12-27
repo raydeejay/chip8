@@ -4,7 +4,7 @@ CC=gcc
 CFLAGS=-O3 -g -Wall -pedantic `sdl2-config --cflags`
 LDFLAGS=-lm `sdl2-config --libs` -lSDL2_image -lSDL2_mixer -lSDL2_ttf
 
-ASM_CFILES=asm8.o
+ASM_CFILES=asm8.o utils.c
 CFILES=main.c chip8.c fontset.c opcodes.c
 
 .PHONY: clean
@@ -14,7 +14,7 @@ all: $(BINARY) $(ASSEMBLER)
 $(BINARY): main.o chip8.o fontset.o opcodes.o
 	${CC} ${CFLAGS} $^ ${LDFLAGS} -o ${BINARY}
 
-$(ASSEMBLER): asm8.o
+$(ASSEMBLER): asm8.o utils.o
 	${CC} ${CFLAGS} $^ ${LDFLAGS} -o ${ASSEMBLER}
 
 #.c.o: terminal.h buffer.h aria.h api.h
@@ -27,7 +27,7 @@ clean:
 check-syntax:
 	gcc -Wall -pedantic -o nul -S ${CHK_SOURCES}
 
-make.depend: main.c chip8.c chip8.h fontset.c opcodes.c opcodes.h asm8.c
+make.depend: main.c chip8.c chip8.h fontset.c opcodes.c opcodes.h asm8.c utils.c utils.h
 	touch make.depend
 	makedepend -I/usr/include/linux -I/usr/lib/gcc/x86_64-linux-gnu/5/include/ -fmake.depend $^
 

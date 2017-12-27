@@ -155,6 +155,23 @@ int assemble(const char *filename, int linenum, int addr,
     }
     else if (!strcmp(instruction, "CALL")) {
         unsigned short target = getTarget(arg1, addr, filename, linenum);
+            if (arg1[0] == '#') {
+                printf("CALL #%03x\n", target);
+            }
+            else if (arg1[0] == '-') {
+                printf("CALL -#%3x\n", target);
+            }
+            else if (arg1[0] == '+') {
+                printf("CALL +#%3x\n", target);
+            }
+            else {
+                target = findLabel(arg1);
+                printf("CALL label %s #%03x\n", arg1, target);
+                if (target == 0xFFFF) {
+                    printf("%s:%u:1: warning: undefined label %s\n", filename, linenum, arg1);
+                    registerRPLine(line, addr, linenum, filename);
+                }
+            }
         gMemory[addr]   = 0x20 | target >> 8;
         gMemory[addr+1] = target & 0xFF;
         len = 2;
@@ -163,55 +180,95 @@ int assemble(const char *filename, int linenum, int addr,
         if (arg1[0] == 'I') {
             unsigned short target = getTarget(arg2, addr, filename, linenum);
             if (arg2[0] == '#') {
-                printf("LD I #%03x\n", target);
+                printf("LD I, #%03x\n", target);
             }
             else if (arg2[0] == '-') {
-                printf("LD I -#%03x\n", target);
+                printf("LD I, -#%3x\n", target);
             }
             else if (arg2[0] == '+') {
-                printf("LD I +#%03x\n", target);
+                printf("LD I, +#%3x\n", target);
+            }
+            else {
+                target = findLabel(arg2);
+                printf("LD I, label %s #%03x\n", arg2, target);
+                if (target == 0xFFFF) {
+                    printf("%s:%u:1: warning: undefined label %s\n", filename, linenum, arg2);
+                    registerRPLine(line, addr, linenum, filename);
+                }
+            }
+
+            gMemory[addr]   = 0xA0 | target >> 8;
+            gMemory[addr+1] = target & 0xFF;
+            len = 2;
+        }
+        else if (arg1[0] == 'V') {
+            unsigned char x = atoi(arg1+1) & 0x0F;
+            unsigned short target = getTarget(arg2, addr, filename, linenum);
+            if (arg2[0] == '#') {
+                printf("LD V%x, #%03x\n", x, target);
+            }
+            else if (arg2[0] == '-') {
+                printf("LD V%x, -#%3x\n", x, target);
+            }
+            else if (arg2[0] == '+') {
+                printf("LD V%x, +#%3x\n", x, target);
             }
             else {
                 target = findLabel(arg2);
                 if (target != 0xFFFF) {
-                    printf("LD I label %s #%03x\n", arg2, target);
+                    printf("LD V%x, label %s #%3x\n", x, arg2, target);
                 }
                 else {
                     printf("%s:%u:1: warning: undefined label %s\n", filename, linenum, arg2);
                     registerRPLine(line, addr, linenum, filename);
                 }
             }
-            printf("LD I, #%03x\n", target);
 
-
-            gMemory[addr]   = 0xA0 | target >> 8;
+            gMemory[addr]   = 0x60 | x;
             gMemory[addr+1] = target & 0xFF;
             len = 2;
         }
+
     }
     else if (!strcmp(instruction, "SE")) {
-        unsigned char x = atoi(arg1+1) & 0x0F;
-        unsigned char kk = atoi(arg2) & 0xFF;
-        printf("SE V%u, %u\n", x, kk);
+        unsigned char x = strtol(arg1+1, NULL, 16) & 0x0F;
+        unsigned char kk = strtol(arg2+1, NULL, 16) & 0xFF;
+        printf("SE V%x, #%x\n", x, kk);
         gMemory[addr]   = 0x30 | x;
         gMemory[addr+1] = kk;
         len = 2;
     }
     else if (!strcmp(instruction, "SNE")) {
-        unsigned char x = atoi(arg1+1) & 0x0F;
-        unsigned char kk = atoi(arg2) & 0xFF;
-        printf("SNE V%u, %u\n", x, kk);
+        unsigned char x = strtol(arg1+1, NULL, 16) & 0x0F;
+        unsigned char kk = strtol(arg2+1, NULL, 16) & 0xFF;
+        printf("SNE V%x, #%x\n", x, kk);
         gMemory[addr]   = 0x40 | x;
         gMemory[addr+1] = kk;
         len = 2;
     }
     else if (!strcmp(instruction, "DRW")) {
-        unsigned char x = atoi(arg1+1) & 0x0F;
-        unsigned char y = atoi(arg2+1) & 0x0F;
-        unsigned char n = atoi(arg3) & 0x0F;
-        printf("DRW V%u, V%u, %u\n", x, y, n);
+        unsigned char x = strtol(arg1+1, NULL, 16) & 0x0F;
+        unsigned char y = strtol(arg2+1, NULL, 16) & 0x0F;
+        unsigned char n = strtol(arg3+1, NULL, 16) & 0x0F;
+        printf("DRW V%x, V%x, #%x\n", x, y, n);
         gMemory[addr]   = 0xD0 | x;
-        gMemory[addr+1] = y << 4 | n;
+        gMemory[addr+1] = (y << 4) | n;
+        len = 2;
+    }
+    else if (!strcmp(instruction, "RND")) {
+        unsigned char x = strtol(arg1+1, NULL, 16) & 0x0F;
+        unsigned char kk = strtol(arg2+1, NULL, 16) & 0xFF;
+        printf("RND V%x, #%x\n", x, kk);
+        gMemory[addr]   = 0xC0 | x;
+        gMemory[addr+1] = kk;
+        len = 2;
+    }
+    else if (!strcmp(instruction, "ADD")) {
+        unsigned char x = strtol(arg1+1, NULL, 16) & 0x0F;
+        unsigned char kk = strtol(arg2+1, NULL, 16) & 0xFF;
+        printf("ADD V%x, #%x\n", x, kk);
+        gMemory[addr]   = 0x70 | x;
+        gMemory[addr+1] = kk;
         len = 2;
     }
     else if (!strcmp(instruction, "DB")) {
@@ -221,9 +278,9 @@ int assemble(const char *filename, int linenum, int addr,
         len = 1;
     }
     else if (!strcmp(instruction, "DW")) {
-        unsigned char hh = atoi(arg1) >> 8;
-        unsigned char ll = atoi(arg1) & 0xFF;
-        printf("DW #%02x#%02x\n", hh, ll);
+        unsigned char hh = strtol(arg1+1, NULL, 16) >> 8;
+        unsigned char ll = strtol(arg1+1, NULL, 16) & 0xFF;
+        printf("DW #%02x%02x\n", hh, ll);
         gMemory[addr]   = hh;
         gMemory[addr+1] = ll;
         len = 2;
@@ -269,7 +326,7 @@ typedef struct rpline {
 rpline_t *gRPLines = NULL;
 
 void registerRPLine(const char *code, unsigned int addr, int linenum, const char *filename) {
-    printf("Registering rpline at addr 0x%04x   %s\n", addr, code);
+    /* printf("Registering rpline at addr 0x%04x   %s\n", addr, code); */
 
     // create the rpline
     rpline_t *line = malloc(sizeof(rpline_t));
@@ -354,7 +411,7 @@ int processLine(const char *line, int addr, int linenum, const char *filename, i
             // read arg2
             arg3 = strdup(token);
         }
-        if (arg1) {
+        else if (arg1) {
             // read arg2
             if (token[n-1] == ',')
                 token[n-1] = '\0';

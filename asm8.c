@@ -106,9 +106,11 @@ int getTarget(const char *arg, int addr, const char *filename, int linenum) {
     return target;
 }
 
+void registerRPLine(const char *code, unsigned int addr, int linenum, const char *filename);
+
 // mnemonics as per http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
 int assemble(const char *filename, int linenum, int addr,
-             char *instruction, char *arg1, char *arg2, char *arg3) {
+             char *instruction, char *arg1, char *arg2, char *arg3, const char *line) {
     int len = 0;
 
     if (instruction[0] == '.')
@@ -146,7 +148,7 @@ int assemble(const char *filename, int linenum, int addr,
                 printf("%s:%u:1: warning: undefined label %s\n", filename, linenum, arg1);
             }
         }
-        
+
         gMemory[addr]   = 0x10 | target >> 8;
         gMemory[addr+1] = target & 0xFF;
         len = 2;
@@ -160,7 +162,28 @@ int assemble(const char *filename, int linenum, int addr,
     else if (!strcmp(instruction, "LD")) {
         if (arg1[0] == 'I') {
             unsigned short target = getTarget(arg2, addr, filename, linenum);
+            if (arg2[0] == '#') {
+                printf("LD I #%03x\n", target);
+            }
+            else if (arg2[0] == '-') {
+                printf("LD I -#%03x\n", target);
+            }
+            else if (arg2[0] == '+') {
+                printf("LD I +#%03x\n", target);
+            }
+            else {
+                target = findLabel(arg2);
+                if (target != 0xFFFF) {
+                    printf("LD I label %s #%03x\n", arg2, target);
+                }
+                else {
+                    printf("%s:%u:1: warning: undefined label %s\n", filename, linenum, arg2);
+                    registerRPLine(line, addr, linenum, filename);
+                }
+            }
             printf("LD I, #%03x\n", target);
+
+
             gMemory[addr]   = 0xA0 | target >> 8;
             gMemory[addr+1] = target & 0xFF;
             len = 2;
@@ -235,6 +258,66 @@ char *readToken(const char *line) {
 /*******************
  * LINE PROCESSOR
  ******************/
+typedef struct rpline {
+    struct rpline *next;
+    int addr;
+    char *code;
+    int linenum;
+    char *filename;
+} rpline_t;
+
+rpline_t *gRPLines = NULL;
+
+void registerRPLine(const char *code, unsigned int addr, int linenum, const char *filename) {
+    printf("Registering rpline at addr 0x%04x   %s\n", addr, code);
+
+    // create the rpline
+    rpline_t *line = malloc(sizeof(rpline_t));
+    line->addr = addr;
+    line->linenum = linenum;
+    line->filename = strdup(filename);
+    line->code = strndup(code, 63);
+
+    if (gRPLines == NULL)
+        gRPLines = line;
+    else {
+        // find a place to link it
+        rpline_t *rpline = gRPLines;
+
+        while (rpline && rpline->next) {
+            rpline = rpline->next;
+        }
+
+        // link it
+        rpline->next = line;
+    }
+}
+
+void unregisterRPLines() {
+    rpline_t *rpline = gRPLines;
+
+    while (rpline) {
+        rpline_t *aux = rpline->next ? rpline->next : NULL;
+        free(rpline->code);
+        free(rpline->filename);
+        free(rpline);
+        rpline = aux ? aux : NULL;
+    }
+}
+
+int processLine(const char *line, int addr, int linenum, const char *filename, int preprocess);
+
+int processRPLines(const rpline_t *RPLines) {
+    const rpline_t *rpline = RPLines;
+
+    while (rpline) {
+        processLine(rpline->code, rpline->addr, rpline->linenum, rpline->filename, 0);
+        rpline = rpline->next ? rpline->next : NULL;
+    }
+
+    return 0xFFFF;
+}
+
 int processLine(const char *line, int addr, int linenum, const char *filename, int preprocess) {
     char *s = (char *) line;
     char *token = NULL;
@@ -310,10 +393,10 @@ int processLine(const char *line, int addr, int linenum, const char *filename, i
         }
     }
 
-    // assemble anyway because we need to know the addresses, and for
-    // that we need to know how long the code will be
+    // assemble straight away
+    // undefined references will be resolved later
     if (instruction) {
-        emittedBytes = assemble(filename, linenum, addr, instruction, arg1, arg2, arg3);
+        emittedBytes = assemble(filename, linenum, addr, instruction, arg1, arg2, arg3, line);
     }
 
     // free resources
@@ -359,18 +442,15 @@ int main(int argc, char*argv[]) {
 
     gMemory = malloc(MEMSIZE);
 
-    // preprocess the file, to register labels and such
+    // assemble the file straight away
+    // the undefined references will be collected in gRPLines
     while ((read = getline(&line, &len, fin)) != -1) {
         addr += processLine(line, addr, linenum, argv[1], 1);
     }
 
-    fseek(fin, 0, SEEK_SET);
-    addr = 0x200;
-
-    // now assemble the code again
-    while ((read = getline(&line, &len, fin)) != -1) {
-        addr += processLine(line, addr, linenum, argv[1], 0);
-    }
+    // now assemble the code that had undefined references again
+    printf("Recompiling lines with undefined references\n");
+    processRPLines(gRPLines);
 
     fwrite(gMemory + 0x200, addr - 0x200, 1, fout);
 
@@ -381,6 +461,7 @@ int main(int argc, char*argv[]) {
     if (line) free(line);
 
     unregisterLabels();
+    unregisterRPLines();
 
     exit(EXIT_SUCCESS);
 }

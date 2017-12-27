@@ -7,9 +7,7 @@
 /*******************
  * LABELS
  ******************/
-label_t *gLabels = NULL;
-
-void registerLabel(const char *name, unsigned int addr) {
+void registerLabel(assembler_t *assembler, const char *name, unsigned int addr) {
     printf("Registering label %s with address 0x%04x\n", name, addr);
 
     // create the label
@@ -18,11 +16,11 @@ void registerLabel(const char *name, unsigned int addr) {
     strncpy(lbl->name, name, 63);
     lbl->name[63] = '\0';     /* make sure it's null-terminated */
 
-    if (gLabels == NULL)
-        gLabels = lbl;
+    if (assembler->labels == NULL)
+        assembler->labels = lbl;
     else {
         // find a place to link it
-        label_t *label = gLabels;
+        label_t *label = assembler->labels;
 
         while (label && label->next) {
             label = label->next;
@@ -33,20 +31,20 @@ void registerLabel(const char *name, unsigned int addr) {
     }
 }
 
-void unregisterLabels() {
-    label_t *label = gLabels;
+void unregisterLabels(assembler_t *assembler) {
+    label_t *label = assembler->labels;
 
-    while (label) {
+    while (label != NULL) {
         label_t *aux = label->next ? label->next : NULL;
         free(label);
         label = aux ? aux : NULL;
     }
 }
 
-int findLabel(const char *name) {
-    label_t *label = gLabels;
+int findLabel(assembler_t *assembler, const char *name) {
+    label_t *label = assembler->labels;
 
-    while (label) {
+    while (label != NULL) {
         if (!strcmp(label->name, name)) {
             /* printf("Found label %s with address 0x%04x\n", label->name, label->addr); */
             return label->addr;

@@ -10,23 +10,21 @@
 /*******************
  * LINE PROCESSOR
  ******************/
-rpline_t *gRPLines = NULL;
-
-void registerRPLine(const char *code, unsigned int addr, int linenum, const char *filename) {
+void registerRPLine(assembler_t *assembler) {
     /* printf("Registering rpline at addr 0x%04x   %s\n", addr, code); */
 
     // create the rpline
     rpline_t *line = malloc(sizeof(rpline_t));
-    line->addr = addr;
-    line->linenum = linenum;
-    line->filename = strdup(filename);
-    line->code = strndup(code, 63);
+    line->addr = assembler->addr;
+    line->linenum = assembler->linenum;
+    line->filename = strdup(assembler->filename);
+    line->code = strndup(assembler->code, 63);
 
-    if (gRPLines == NULL)
-        gRPLines = line;
+    if (assembler->RPLines == NULL)
+        assembler->RPLines = line;
     else {
         // find a place to link it
-        rpline_t *rpline = gRPLines;
+        rpline_t *rpline = assembler->RPLines;
 
         while (rpline && rpline->next) {
             rpline = rpline->next;
@@ -37,8 +35,8 @@ void registerRPLine(const char *code, unsigned int addr, int linenum, const char
     }
 }
 
-void unregisterRPLines() {
-    rpline_t *rpline = gRPLines;
+void unregisterRPLines(assembler_t *assembler) {
+    rpline_t *rpline = assembler->RPLines;
 
     while (rpline) {
         rpline_t *aux = rpline->next ? rpline->next : NULL;
@@ -49,19 +47,23 @@ void unregisterRPLines() {
     }
 }
 
-int processRPLines(const rpline_t *RPLines) {
-    const rpline_t *rpline = RPLines;
+int processRPLines(assembler_t *assembler) {
+    const rpline_t *rpline = assembler->RPLines;
 
     while (rpline) {
-        processLine(rpline->code, rpline->addr, rpline->linenum, rpline->filename, 0);
+        assembler->addr = rpline->addr;
+        assembler->linenum = rpline->linenum;
+        // assembler->code = rpline->code;
+        
+        processLine(assembler, rpline->code, 0);
         rpline = rpline->next ? rpline->next : NULL;
     }
 
     return 0xFFFF;
 }
 
-int processLine(const char *line, int addr, int linenum, const char *filename, int preprocess) {
-    char *s = (char *) line;
+int processLine(assembler_t *assembler, const char *code, int preprocess) {
+    char *s = (char *) code;
     char *token = NULL;
     int n = 0;
     int emittedBytes = 0;
@@ -129,16 +131,18 @@ int processLine(const char *line, int addr, int linenum, const char *filename, i
         n = strlen(token);
     }
 
+    assembler->code = strdup(code);
+    
     if (preprocess) {
         if (label) {
-            registerLabel(label, addr);
+            registerLabel(assembler, label, assembler->addr);
         }
     }
 
     // assemble straight away
     // undefined references will be resolved later
     if (instruction) {
-        emittedBytes = assemble(filename, linenum, addr, instruction, arg1, arg2, arg3, line);
+        emittedBytes = assemble(assembler, instruction, arg1, arg2, arg3);
     }
 
     // free resources
@@ -149,5 +153,7 @@ int processLine(const char *line, int addr, int linenum, const char *filename, i
     if (arg3) free(arg3);
     free(token);
 
+    assembler->addr += emittedBytes;
+    
     return emittedBytes;
 }

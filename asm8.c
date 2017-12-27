@@ -37,30 +37,34 @@ int main(int argc, char*argv[]) {
     }
 
     int linenum = 1;
-    int addr = 0x200;
+    int base = 0x200;
+    int end = base;
+    int memsize = 4096 - 512;
 
-    gMemory = malloc(MEMSIZE);
+    assembler_t *assembler = newAssembler(argv[1], base, memsize);
+
+    assembler->addr = base;
+    assembler->linenum = linenum;
+    assembler->filename = argv[1];
 
     // assemble the file straight away
     // the undefined references will be collected in gRPLines
     while ((read = getline(&line, &len, fin)) != -1) {
-        addr += processLine(line, addr, linenum, argv[1], 1);
+        end += processLine(assembler, line, 1);
     }
 
     // now assemble the code that had undefined references again
     printf("Recompiling lines with undefined references\n");
-    processRPLines(gRPLines);
+    assembler->addr = base;
+    processRPLines(assembler);
 
-    fwrite(gMemory + 0x200, addr - 0x200, 1, fout);
-
-    free(gMemory);
+    fwrite(assembler->memory + base, end - base, 1, fout);
 
     if (fin) fclose(fin);
     if (fout) fclose(fout);
     if (line) free(line);
 
-    unregisterLabels();
-    unregisterRPLines();
+    destroyAssembler(assembler);
 
     exit(EXIT_SUCCESS);
 }

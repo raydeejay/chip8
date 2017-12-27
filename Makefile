@@ -20,7 +20,7 @@ clean:
 
 # for flymake
 check-syntax:
-	gcc -o nul -S ${CHK_SOURCES}
+	gcc -Wall -pedantic -o nul -S ${CHK_SOURCES}
 
 make.depend: main.c chip8.c chip8.h fontset.c opcodes.c opcodes.h
 	touch make.depend

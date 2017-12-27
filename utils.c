@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+// string trimming code from
+// https://rosettacode.org/wiki/Strip_whitespace_from_a_string/Top_and_tail#C
+
 char *rtrim(const char *s)
 {
     while( isspace(*s) || !isprint(*s) ) ++s;

@@ -1,7 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-
-// trimming from https://rosettacode.org/wiki/Strip_whitespace_from_a_string/Top_and_tail#C
 #include <string.h>
 #include <ctype.h>
 

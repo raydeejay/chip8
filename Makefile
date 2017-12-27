@@ -1,28 +1,33 @@
 BINARY=chip8
+ASSEMBLER=asm8
 CC=gcc
 CFLAGS=-O3 -g -Wall -pedantic `sdl2-config --cflags`
 LDFLAGS=-lm `sdl2-config --libs` -lSDL2_image -lSDL2_mixer -lSDL2_ttf
 
+ASM_CFILES=asm8.o
 CFILES=main.c chip8.c fontset.c opcodes.c
 
 .PHONY: clean
 
-all: $(BINARY)
+all: $(BINARY) $(ASSEMBLER)
 
 $(BINARY): main.o chip8.o fontset.o opcodes.o
 	${CC} ${CFLAGS} $^ ${LDFLAGS} -o ${BINARY}
+
+$(ASSEMBLER): asm8.o
+	${CC} ${CFLAGS} $^ ${LDFLAGS} -o ${ASSEMBLER}
 
 #.c.o: terminal.h buffer.h aria.h api.h
 #	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
 clean:
-	rm -f *.o ${BINARY} nul
+	rm -f *.o ${BINARY} ${ASSEMBLER} nul
 
 # for flymake
 check-syntax:
 	gcc -Wall -pedantic -o nul -S ${CHK_SOURCES}
 
-make.depend: main.c chip8.c chip8.h fontset.c opcodes.c opcodes.h
+make.depend: main.c chip8.c chip8.h fontset.c opcodes.c opcodes.h asm8.c
 	touch make.depend
 	makedepend -I/usr/include/linux -I/usr/lib/gcc/x86_64-linux-gnu/5/include/ -fmake.depend $^
 

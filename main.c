@@ -219,6 +219,8 @@ int main(int argc, char* argv[]) {
             SDL_RenderPresent(gRenderer);
             ++countedFrames;
 
+            // decrement timers at 60Hz
+
             // Throttle
             int frameTicks = SDL_GetTicks() - startFrame;
             if (frameTicks < SCREEN_TICKS_PER_FRAME) {

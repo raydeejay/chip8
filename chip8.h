@@ -41,6 +41,7 @@ extern int chip8_loadFile(chip8_t *machine, const char *filename);
 extern int chip8_destroy(chip8_t *machine);
 extern int chip8_draw(chip8_t *machine);
 extern int chip8_cycle(chip8_t *machine);
+extern int chip8_decrementTimers(chip8_t *machine);
 extern int chip8_setKeys(chip8_t *machine, unsigned char state[16]);
 
 extern unsigned char chip8_fontset[80];

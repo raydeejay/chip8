@@ -100,8 +100,6 @@ int chip8_cycle(chip8_t *machine) {
     // fetch opcode
     machine->opcode = (machine->RAM[machine->PC] << 8) | (machine->RAM[machine->PC + 1]);
 
-    //printf("Executing opcode 0x%04x address 0x%04x\n", machine->opcode, machine->PC);
-
     // decode opcode
     int index = (machine->opcode & 0xF000) >> 12;
 
@@ -111,6 +109,11 @@ int chip8_cycle(chip8_t *machine) {
     // update timers
     if (machine->sound_timer > 0) { machine->sound_timer--; }
     if (machine->delay_timer > 0) { machine->delay_timer--; }
+
+    return 1;
+}
+
+int chip8_decrementTimers(chip8_t *machine) {
 
     return 1;
 }
